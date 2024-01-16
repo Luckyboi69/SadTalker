@@ -2,6 +2,7 @@ import os
 import cv2
 import yaml
 import numpy as np
+import uuid
 import warnings
 from skimage import img_as_ubyte
 import safetensors
@@ -11,7 +12,6 @@ warnings.filterwarnings('ignore')
 
 import imageio
 import torch
-import torchvision
 
 
 from src.facerender.modules.keypoint_detector import HEEstimator, KPDetector
@@ -20,9 +20,8 @@ from src.facerender.modules.generator import OcclusionAwareGenerator, OcclusionA
 from src.facerender.modules.make_animation import make_animation
 
 from pydub import AudioSegment
-from src.utils.face_enhancer import enhancer_generator_with_len, enhancer_list
 from src.utils.paste_pic import paste_pic
-from src.utils.videoio import save_video_with_watermark
+
 
 
 class AnimateFromCoeff:
@@ -193,32 +192,39 @@ class AnimateFromCoeff:
 
         predictions_video = predictions_video.reshape((-1,) + predictions_video.shape[2:])
         predictions_video = predictions_video[:frame_num]
+        video = []
+        for idx in range(predictions_video.shape[0]):
+            image = predictions_video[idx]
+            image = np.transpose(image.data.cpu().numpy(), [1, 2, 0]).astype(np.float32)
+            video.append(image)     
+        result = img_as_ubyte(video)       
 
-        video = [np.transpose(image.data.cpu().numpy(), [1, 2, 0]).astype(np.float32) for image in predictions_video]
-        result = img_as_ubyte(video)
+        video_name = x['video_name']  + '_.mp4'
+        path = os.path.join(video_save_dir, 'temp_'+video_name)
+        
+        imageio.mimsave(path, result,  fps=float(25))
 
-        video_name = x['video_name'] + '.mp4'
-        path = os.path.join(video_save_dir, 'temp_' + video_name)
-
-        imageio.mimsave(path, result, fps=float(25))
-
-        audio_path = x['audio_path']
+        av_path = os.path.join(video_save_dir, video_name)
+        
+        audio_path =  x['audio_path'] 
         audio_name = os.path.splitext(os.path.split(audio_path)[-1])[0]
-        new_audio_path = os.path.join(video_save_dir, audio_name + '.wav')
+        new_audio_path = os.path.join(video_save_dir, audio_name+'.wav')
         start_time = 0
+        # cog will not keep the .mp3 filename
         sound = AudioSegment.from_file(audio_path)
-        frames = frame_num
-        end_time = start_time + frames * 1 / 25 * 1000
-        word1 = sound.set_frame_rate(16000)
+        frames = frame_num 
+        end_time = start_time + frames*1/25*1000
+        word1=sound.set_frame_rate(16000)
         word = word1[start_time:end_time]
         word.export(new_audio_path, format="wav")
-
+        temp_file = str(uuid.uuid4()) + '.mp4'
+        cmd = r'ffmpeg -y -hide_banner -loglevel error -i "%s" -i "%s" -vcodec copy "%s"' % (path, new_audio_path, temp_file)
+        os.system(cmd)
+        os.remove(temp_file)
         video_name_full = x['video_name']  + '_full.mp4'
         full_video_path = os.path.join(video_save_dir, video_name_full)
         return_path = full_video_path
         paste_pic(path, pic_path, crop_info, new_audio_path, full_video_path)
-        print(f'The generated video is named {video_save_dir}/{video_name_full}')
-
         os.remove(path)
         os.remove(new_audio_path)
         return return_path

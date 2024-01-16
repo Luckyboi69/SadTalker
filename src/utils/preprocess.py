@@ -91,24 +91,15 @@ class CropAndExtract():
 
         x_full_frames= [cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  for frame in full_frames] 
 
-        #### crop images as the 
-        if 'crop' in crop_or_resize.lower(): # default crop
-            x_full_frames, crop, quad = self.propress.crop(x_full_frames, still=True if 'ext' in crop_or_resize.lower() else False, xsize=512)
-            clx, cly, crx, cry = crop
-            lx, ly, rx, ry = quad
-            lx, ly, rx, ry = int(lx), int(ly), int(rx), int(ry)
-            oy1, oy2, ox1, ox2 = cly+ly, cly+ry, clx+lx, clx+rx
-            crop_info = ((ox2 - ox1, oy2 - oy1), crop, quad)
-        elif 'full' in crop_or_resize.lower():
-            x_full_frames, crop, quad = self.propress.crop(x_full_frames, still=True if 'ext' in crop_or_resize.lower() else False, xsize=512)
-            clx, cly, crx, cry = crop
-            lx, ly, rx, ry = quad
-            lx, ly, rx, ry = int(lx), int(ly), int(rx), int(ry)
-            oy1, oy2, ox1, ox2 = cly+ly, cly+ry, clx+lx, clx+rx
-            crop_info = ((ox2 - ox1, oy2 - oy1), crop, quad)
-        else: # resize mode
-            oy1, oy2, ox1, ox2 = 0, x_full_frames[0].shape[0], 0, x_full_frames[0].shape[1] 
-            crop_info = ((ox2 - ox1, oy2 - oy1), None, None)
+
+
+        x_full_frames, crop, quad = self.propress.crop(x_full_frames, still=True if 'ext' in crop_or_resize.lower() else False, xsize=512)
+        clx, cly, crx, cry = crop
+        lx, ly, rx, ry = quad
+        lx, ly, rx, ry = int(lx), int(ly), int(rx), int(ry)
+        oy1, oy2, ox1, ox2 = cly+ly, cly+ry, clx+lx, clx+rx
+        crop_info = ((ox2 - ox1, oy2 - oy1), crop, quad)
+ 
 
         frames_pil = [Image.fromarray(cv2.resize(frame,(pic_size, pic_size))) for frame in x_full_frames]
         if len(frames_pil) == 0:

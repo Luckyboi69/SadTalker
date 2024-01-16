@@ -3,8 +3,6 @@ import numpy as np
 from tqdm import tqdm
 import uuid
 
-from src.utils.videoio import save_video_with_watermark 
-
 def paste_pic(video_path, pic_path, crop_info, new_audio_path, full_video_path, extended_crop=False):
 
     if not os.path.isfile(pic_path):
@@ -54,7 +52,7 @@ def paste_pic(video_path, pic_path, crop_info, new_audio_path, full_video_path, 
             oy1, oy2, ox1, ox2 = cly+ly, cly+ry, clx+lx, clx+rx
 
     tmp_path = str(uuid.uuid4())+'.mp4'
-    out_tmp = cv2.VideoWriter(tmp_path, cv2.VideoWriter_fourcc(*'MP4V'), fps, (frame_w, frame_h))
+    out_tmp = cv2.VideoWriter(tmp_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (frame_w, frame_h))
     for crop_frame in tqdm(crop_frames, 'seamlessClone:'):
         p = cv2.resize(crop_frame.astype(np.uint8), (ox2-ox1, oy2 - oy1)) 
 
@@ -65,5 +63,6 @@ def paste_pic(video_path, pic_path, crop_info, new_audio_path, full_video_path, 
 
     out_tmp.release()
 
-    save_video_with_watermark(tmp_path, new_audio_path, full_video_path, watermark=False)
+    cmd = r'ffmpeg -y -hide_banner -loglevel error -i "%s" -i "%s" -vcodec copy "%s"' % (tmp_path, new_audio_path, full_video_path)
+    os.system(cmd)
     os.remove(tmp_path)
